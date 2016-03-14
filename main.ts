@@ -4,9 +4,11 @@ import Point = Phaser.Point;
 class mainState extends Phaser.State {
     game: Phaser.Game;
 
-    // variables
+    // Variables
     private barra:Phaser.Sprite;
     private pelota:Phaser.Sprite;
+    private grupoLadrillos:Phaser.Group; // Ladrillos
+
     private cursor:Phaser.CursorKeys;
 
     // Constantes
@@ -22,6 +24,7 @@ class mainState extends Phaser.State {
         // Importamos las imagenes
         this.load.image('barra', 'assets/png/paddleRed.png');
         this.load.image('pelota', 'assets/png/ballGrey.png');
+        this.load.image('ladrillo', 'assets/png/element_green_rectangle.png');
 
         // Declaramos el motor de físicas que vamos a usar
         this.physics.startSystem(Phaser.Physics.ARCADE);
@@ -35,6 +38,39 @@ class mainState extends Phaser.State {
         // Creamos los elementos
         this.createBarra();
         this.createPelota();
+        this.crearLadrillos();
+    }
+
+    crearLadrillos(){
+
+        // Anyadimos el recolectable a un grupo
+        this.grupoLadrillos = this.add.group();
+        this.grupoLadrillos.enableBody = true;
+
+        // Posiciones en las que generaremos los ladrillos
+
+        var positions:Point[] = [
+            new Point(300, 95),
+            new Point(190, 135), new Point(410, 135),
+            new Point(120, 200), new Point(480, 200),
+            new Point(95, 300), new Point(505, 300),
+            new Point(120, 405), new Point(480, 405),
+            new Point(190, 465), new Point(410, 465),
+            new Point(300, 505),
+        ];
+
+        // Colocamos los sprites en sus coordenadas a traves de un for
+        for (var i = 0; i < positions.length; i++) {
+
+            var position = positions[i];
+
+            // instanciamos el Sprite
+            var larillo = new Ladrillo(this.game, position.x, position.y, 'ladrillo', 0);
+
+            // mostramos el Sprite por pantalla
+            this.add.existing(larillo);
+            this.grupoLadrillos.add(larillo);
+        }
     }
 
     createBarra(){
@@ -76,11 +112,23 @@ class mainState extends Phaser.State {
         this.pelota.body.bounce.setTo(1);
     }
 
+    private destruirLadrillo(pelota:Phaser.Sprite, ladrillo:Phaser.Sprite) {
+        ladrillo.kill();    // Nos cargamos el sprite
+
+        this.pelota.body.velocity.x = -this.pelota.body.velocity.x;
+        this.pelota.body.velocity.y = -this.pelota.body.velocity.y;
+    }
+
     update():void {
         super.update();
 
-        // Colisiones del jugador (UFO) con las paredes
+        // Colisiones del jugador (barra) con las paredes
         this.physics.arcade.collide(this.barra, this.pelota);
+        //this.physics.arcade.collide(this.pelota, this.grupoLadrillos);
+
+        /* Overlap es similar a un trigger de colision. Es decir, gestiona las colisiones pero no de manera "física"
+         de los objetos, al superponerse los objetos, ejcuta código*/
+        this.physics.arcade.overlap(this.pelota, this.grupoLadrillos, this.destruirLadrillo, null, this);
 
         // Movimientos en el eje X
         if (this.cursor.left.isDown) {
