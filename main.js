@@ -10,10 +10,9 @@ var mainState = (function (_super) {
     function mainState() {
         _super.apply(this, arguments);
         // Constantes
-        this.ACCELERATION = 300; // aceleración
-        this.VELOCIDAD_MAXIMA = 350; // pixels/second
+        this.VELOCIDAD_MAXIMA = 450; // pixels/second
         this.FUERZA_ROZAMIENTO = 100; // Aceleración negativa
-        this.UFO_SPEED = 200;
+        this.ACCELERATION = 300; // aceleración
     }
     mainState.prototype.preload = function () {
         _super.prototype.preload.call(this);
@@ -37,15 +36,19 @@ var mainState = (function (_super) {
         this.grupoLadrillos = this.add.group();
         this.grupoLadrillos.enableBody = true;
         // Posiciones en las que generaremos los ladrillos
-        var positions = [
-            new Point(300, 95),
-            new Point(190, 135), new Point(410, 135),
-            new Point(120, 200), new Point(480, 200),
-            new Point(95, 300), new Point(505, 300),
-            new Point(120, 405), new Point(480, 405),
-            new Point(190, 465), new Point(410, 465),
-            new Point(300, 505),
-        ];
+        var ladrillosPorLinea = 20;
+        var numeroFilas = 8;
+        // Tamanyo de los ladrillos
+        var anchuraLadrillo = 64;
+        var alturaLadrillo = 32;
+        // Array que contiene las coordenadas de los ladrillos
+        var positions = [];
+        // For para llenar array de coordeandas
+        for (var posFila = 0; posFila < numeroFilas; posFila++) {
+            for (var posColumna = 0; posColumna < ladrillosPorLinea; posColumna++) {
+                positions.push(new Point(anchuraLadrillo * posColumna, posFila * (alturaLadrillo + 1)));
+            }
+        }
         // Colocamos los sprites en sus coordenadas a traves de un for
         for (var i = 0; i < positions.length; i++) {
             var position = positions[i];
@@ -57,8 +60,10 @@ var mainState = (function (_super) {
         }
     };
     mainState.prototype.createBarra = function () {
+        // Coordenadas y posicion de la barra
         this.barra = this.add.sprite(this.world.centerX, 0, 'barra');
-        this.barra.position = (new Point(this.world.centerX, 600 - this.barra.height));
+        this.barra.x = this.world.centerX;
+        this.barra.y = this.world.height - this.barra.height - 5;
         this.barra.anchor.setTo(0.5, 0.5);
         // Para el movimiento de la barra con las teclas
         this.cursor = this.input.keyboard.createCursorKeys();
@@ -73,11 +78,14 @@ var mainState = (function (_super) {
         this.barra.body.immovable = true;
     };
     mainState.prototype.createPelota = function () {
-        this.pelota = this.add.sprite(this.world.centerX, 0, 'pelota');
+        // Coordenadas y posicion de la pelota
+        this.pelota = this.add.sprite(this.world.centerX, 500, 'pelota');
+        this.pelota.position = (new Point(this.world.centerX, this.world.height - this.pelota.height));
         this.pelota.anchor.setTo(0.5, 0.5);
         // Activamos la fisica y la hacemos rebotar con los bordes
         this.physics.enable(this.pelota);
         this.pelota.body.collideWorldBounds = true;
+        this.pelota.body.maxVelocity.setTo(this.VELOCIDAD_MAXIMA, this.VELOCIDAD_MAXIMA);
         // Velocidad de la pelota
         this.pelota.body.velocity.x = 170;
         this.pelota.body.velocity.y = 170;
@@ -86,8 +94,8 @@ var mainState = (function (_super) {
     };
     mainState.prototype.destruirLadrillo = function (pelota, ladrillo) {
         ladrillo.kill(); // Nos cargamos el sprite
-        this.pelota.body.velocity.x = -this.pelota.body.velocity.x;
-        this.pelota.body.velocity.y = -this.pelota.body.velocity.y;
+        this.pelota.body.acceleration.x = this.pelota.body.acceleration.x + 5;
+        this.pelota.body.acceleration.y = this.pelota.body.acceleration.y + 5;
     };
     mainState.prototype.update = function () {
         _super.prototype.update.call(this);
@@ -96,7 +104,8 @@ var mainState = (function (_super) {
         //this.physics.arcade.collide(this.pelota, this.grupoLadrillos);
         /* Overlap es similar a un trigger de colision. Es decir, gestiona las colisiones pero no de manera "física"
          de los objetos, al superponerse los objetos, ejcuta código*/
-        this.physics.arcade.overlap(this.pelota, this.grupoLadrillos, this.destruirLadrillo, null, this);
+        this.physics.arcade.collide(this.pelota, this.grupoLadrillos, this.destruirLadrillo, null, this);
+        this.barra.position.x = this.game.input.mousePointer.x;
         // Movimientos en el eje X
         if (this.cursor.left.isDown) {
             this.barra.body.acceleration.x = -this.ACCELERATION;
@@ -114,12 +123,15 @@ var Ladrillo = (function (_super) {
     __extends(Ladrillo, _super);
     function Ladrillo(game, x, y, key, frame) {
         _super.call(this, game, x, y, key, frame);
+        // Activamos las fisicas
+        this.game.physics.enable(this, Phaser.Physics.ARCADE);
+        this.body.immovable = true;
     }
     return Ladrillo;
 })(Phaser.Sprite);
 var SimpleGame = (function () {
     function SimpleGame() {
-        this.game = new Phaser.Game(600, 600, Phaser.AUTO, 'gameDiv');
+        this.game = new Phaser.Game(1280, 750, Phaser.AUTO, 'gameDiv');
         this.game.state.add('main', mainState);
         this.game.state.start('main');
     }
