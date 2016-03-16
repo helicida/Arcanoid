@@ -13,7 +13,7 @@ class mainState extends Phaser.State {
     // Constantes
     private VELOCIDAD_MAXIMA = 450;     // pixels/second
     private FUERZA_ROZAMIENTO = 100; // Aceleración negativa
-    private ACCELERATION = 300; // aceleración
+    private ACCELERATION = 700; // aceleración
 
     preload():void {
         super.preload();
@@ -21,7 +21,11 @@ class mainState extends Phaser.State {
         // Importamos las imagenes
         this.load.image('barra', 'assets/png/paddleRed.png');
         this.load.image('pelota', 'assets/png/ballGrey.png');
-        this.load.image('ladrillo', 'assets/png/element_green_rectangle.png');
+        this.load.image('ladrilloVerde', 'assets/png/element_green_rectangle.png');
+        this.load.image('ladrilloAzul', 'assets/png/element_blue_rectangle.png');
+        this.load.image('ladrilloRojo', 'assets/png/element_red_rectangle.png');
+        this.load.image('ladrilloAmarillo', 'assets/png/element_yellow_rectangle.png');
+        this.load.image('ladrilloGris', 'assets/png/element_grey_rectangle.png');
 
         // Declaramos el motor de físicas que vamos a usar
         this.physics.startSystem(Phaser.Physics.ARCADE);
@@ -44,6 +48,9 @@ class mainState extends Phaser.State {
         this.grupoLadrillos = this.add.group();
         this.grupoLadrillos.enableBody = true;
 
+        // Array con ladrillos
+        var barritas = ['ladrilloVerde', 'ladrilloAzul', 'ladrilloRojo', 'ladrilloAmarillo', 'ladrilloGris'];
+
         // Posiciones en las que generaremos los ladrillos
         var ladrillosPorLinea = 20;
         var numeroFilas = 8;
@@ -52,27 +59,25 @@ class mainState extends Phaser.State {
         var anchuraLadrillo = 64;
         var alturaLadrillo = 32;
 
-        // Array que contiene las coordenadas de los ladrillos
-        var positions:Point[] = [];
-
         // For para llenar array de coordeandas
         for (var posFila = 0; posFila < numeroFilas; posFila++) {
             for (var posColumna = 0; posColumna < ladrillosPorLinea; posColumna++) {
-                positions.push(new Point(anchuraLadrillo * posColumna, posFila * (alturaLadrillo + 1)));
+
+                // Array circular
+                var colorBarrita = barritas[posFila % barritas.length];
+
+                // Coordenadas en las que mostraremos el ladrillo
+                var x = anchuraLadrillo * posColumna;
+                var y = posFila * (alturaLadrillo + 1);
+
+                // instanciamos el Sprite
+                var ladrillo = new Ladrillo(this.game, x, y, colorBarrita, 0);
+
+                // mostramos el Sprite por pantalla
+                this.add.existing(ladrillo);
+                this.grupoLadrillos.add(ladrillo);
+
             }
-        }
-
-        // Colocamos los sprites en sus coordenadas a traves de un for
-        for (var i = 0; i < positions.length; i++) {
-
-            var position = positions[i];
-
-            // instanciamos el Sprite
-            var larillo = new Ladrillo(this.game, position.x, position.y, 'ladrillo', 0);
-
-            // mostramos el Sprite por pantalla
-            this.add.existing(larillo);
-            this.grupoLadrillos.add(larillo);
         }
     }
 
@@ -120,8 +125,8 @@ class mainState extends Phaser.State {
 
     private destruirLadrillo(pelota:Phaser.Sprite, ladrillo:Phaser.Sprite) {
         ladrillo.kill();    // Nos cargamos el sprite
-        this.pelota.body.acceleration.x = this.pelota.body.acceleration.x + 5;
-        this.pelota.body.acceleration.y = this.pelota.body.acceleration.y + 5;
+        this.pelota.body.velocity.x = this.pelota.body.velocity.x + 5;
+        this.pelota.body.velocity.y = this.pelota.body.velocity.y + 5;
     }
 
     update():void {
@@ -135,18 +140,14 @@ class mainState extends Phaser.State {
          de los objetos, al superponerse los objetos, ejcuta código*/
         this.physics.arcade.collide(this.pelota, this.grupoLadrillos, this.destruirLadrillo, null, this);
 
-        this.barra.position.x = this.game.input.mousePointer.x;
-
         // Movimientos en el eje X
         if (this.cursor.left.isDown) {
             this.barra.body.acceleration.x = -this.ACCELERATION;
         } else if (this.cursor.right.isDown) {
             this.barra.body.acceleration.x = this.ACCELERATION / 2;
         }
-        else {
-            this.barra.body.acceleration.x = 0;
-        }
 
+        this.barra.position.x = this.game.input.x;
     }
 }
 
