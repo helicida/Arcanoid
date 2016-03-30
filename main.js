@@ -9,10 +9,12 @@ var mainState = (function (_super) {
     __extends(mainState, _super);
     function mainState() {
         _super.apply(this, arguments);
+        this.puntuacion = 0;
         // Constantes
         this.VELOCIDAD_MAXIMA = 450; // pixels/second
         this.FUERZA_ROZAMIENTO = 100; // Aceleración negativa
-        this.ACCELERATION = 700; // aceleración
+        this.ACELERACION = 700; // aceleración
+        this.MARGEN_TEXTO = 50; // Margen de los textos
     }
     mainState.prototype.preload = function () {
         _super.prototype.preload.call(this);
@@ -34,6 +36,7 @@ var mainState = (function (_super) {
         this.createBarra();
         this.createPelota();
         this.crearLadrillos();
+        this.createTexts();
     };
     mainState.prototype.crearLadrillos = function () {
         // Anyadimos el recolectable a un grupo
@@ -62,6 +65,14 @@ var mainState = (function (_super) {
                 this.grupoLadrillos.add(ladrillo);
             }
         }
+    };
+    mainState.prototype.createTexts = function () {
+        var width = this.scale.bounds.width;
+        this.scoreText = this.add.text(this.MARGEN_TEXTO, this.MARGEN_TEXTO, 'Score: ' + this.puntuacion, { font: "30px Arial", fill: "#ffffff" });
+        this.speedText = this.add.text(width - this.MARGEN_TEXTO, this.MARGEN_TEXTO, 'Speed: ' + this.pelota.body.velocity.x, { font: "30px Arial", fill: "#ffffff" });
+        this.speedText.anchor.setTo(1, 0);
+        this.scoreText.fixedToCamera = true;
+        this.speedText.fixedToCamera = true;
     };
     mainState.prototype.createBarra = function () {
         // Coordenadas y posicion de la barra
@@ -100,6 +111,11 @@ var mainState = (function (_super) {
         ladrillo.kill(); // Nos cargamos el sprite
         this.pelota.body.velocity.x = this.pelota.body.velocity.x + 5;
         this.pelota.body.velocity.y = this.pelota.body.velocity.y + 5;
+        this.puntuacion = this.puntuacion + 1;
+        // Imprimimos los textos
+        this.scoreText.setText("Score: " + this.puntuacion);
+        // Sacamos el modulo de la velocidad y lo imprimimos por pantalla
+        this.speedText.setText("Speed: " + Math.sqrt(Math.pow(this.pelota.body.velocity.x, 2) + Math.pow(this.pelota.body.velocity.y, 2)).toFixed(2));
     };
     mainState.prototype.update = function () {
         _super.prototype.update.call(this);
@@ -111,10 +127,10 @@ var mainState = (function (_super) {
         this.physics.arcade.collide(this.pelota, this.grupoLadrillos, this.destruirLadrillo, null, this);
         // Movimientos en el eje X
         if (this.cursor.left.isDown) {
-            this.barra.body.acceleration.x = -this.ACCELERATION;
+            this.barra.body.acceleration.x = -this.ACELERACION;
         }
         else if (this.cursor.right.isDown) {
-            this.barra.body.acceleration.x = this.ACCELERATION / 2;
+            this.barra.body.acceleration.x = this.ACELERACION / 2;
         }
         this.barra.position.x = this.game.input.x;
     };

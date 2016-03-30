@@ -4,16 +4,21 @@ import Point = Phaser.Point;
 class mainState extends Phaser.State {
     game: Phaser.Game;
 
+    private scoreText:Phaser.Text;
+    private speedText:Phaser.Text;
+
     // Variables
     private barra:Phaser.Sprite;
     private pelota:Phaser.Sprite;
     private grupoLadrillos:Phaser.Group; // Ladrillos
     private cursor:Phaser.CursorKeys;
+    private puntuacion = 0;
 
     // Constantes
-    private VELOCIDAD_MAXIMA = 450;     // pixels/second
+    private VELOCIDAD_MAXIMA = 450;  // pixels/second
     private FUERZA_ROZAMIENTO = 100; // Aceleración negativa
-    private ACCELERATION = 700; // aceleración
+    private ACELERACION = 700;       // aceleración
+    private MARGEN_TEXTO = 50;       // Margen de los textos
 
     preload():void {
         super.preload();
@@ -40,6 +45,7 @@ class mainState extends Phaser.State {
         this.createBarra();
         this.createPelota();
         this.crearLadrillos();
+        this.createTexts();
     }
 
     crearLadrillos(){
@@ -79,6 +85,20 @@ class mainState extends Phaser.State {
 
             }
         }
+    }
+
+    createTexts(){
+        var width = this.scale.bounds.width;
+
+        this.scoreText = this.add.text(this.MARGEN_TEXTO, this.MARGEN_TEXTO, 'Score: ' + this.puntuacion,
+            {font: "30px Arial", fill: "#ffffff"});
+
+        this.speedText = this.add.text(width - this.MARGEN_TEXTO, this.MARGEN_TEXTO, 'Speed: ' + this.pelota.body.velocity.x,
+            {font: "30px Arial", fill: "#ffffff"});
+
+        this.speedText.anchor.setTo(1, 0);
+        this.scoreText.fixedToCamera = true;
+        this.speedText.fixedToCamera = true;
     }
 
     createBarra(){
@@ -127,6 +147,13 @@ class mainState extends Phaser.State {
         ladrillo.kill();    // Nos cargamos el sprite
         this.pelota.body.velocity.x = this.pelota.body.velocity.x + 5;
         this.pelota.body.velocity.y = this.pelota.body.velocity.y + 5;
+        this.puntuacion = this.puntuacion + 1;
+
+        // Imprimimos los textos
+        this.scoreText.setText("Score: " + this.puntuacion);
+
+        // Sacamos el modulo de la velocidad y lo imprimimos por pantalla
+        this.speedText.setText("Speed: " + Math.sqrt(Math.pow(this.pelota.body.velocity.x, 2) + Math.pow(this.pelota.body.velocity.y, 2)).toFixed(2));
     }
 
     update():void {
@@ -142,9 +169,9 @@ class mainState extends Phaser.State {
 
         // Movimientos en el eje X
         if (this.cursor.left.isDown) {
-            this.barra.body.acceleration.x = -this.ACCELERATION;
+            this.barra.body.acceleration.x = -this.ACELERACION;
         } else if (this.cursor.right.isDown) {
-            this.barra.body.acceleration.x = this.ACCELERATION / 2;
+            this.barra.body.acceleration.x = this.ACELERACION / 2;
         }
 
         this.barra.position.x = this.game.input.x;
