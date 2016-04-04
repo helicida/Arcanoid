@@ -32,6 +32,7 @@ var mainState = (function (_super) {
     mainState.prototype.create = function () {
         _super.prototype.create.call(this);
         this.game.stage.backgroundColor = "#4488AA";
+        this.physics.arcade.checkCollision.down = false;
         // Creamos los elementos
         this.createBarra();
         this.createPelota();
@@ -95,7 +96,7 @@ var mainState = (function (_super) {
     mainState.prototype.createPelota = function () {
         // Coordenadas y posicion de la pelota
         this.pelota = this.add.sprite(this.world.centerX, 500, 'pelota');
-        this.pelota.position = (new Point(this.world.centerX, this.world.height - this.pelota.height));
+        this.pelota.position = (new Point(this.world.centerX, this.world.centerY));
         this.pelota.anchor.setTo(0.5, 0.5);
         // Activamos la fisica y la hacemos rebotar con los bordes
         this.physics.enable(this.pelota);
@@ -105,22 +106,36 @@ var mainState = (function (_super) {
         this.pelota.body.velocity.x = 170;
         this.pelota.body.velocity.y = 170;
         // Rebote
-        this.pelota.body.bounce.setTo(1);
+        this.pelota.body.bounce.setTo(1.2);
+        this.pelota.checkWorldBounds = true;
+        this.pelota.events.onOutOfBounds.add(this.destruirPelota, this);
+    };
+    mainState.prototype.destruirPelota = function (pelota) {
+        pelota.kill();
+        this.endGameText = this.add.text(this.world.centerX - 300, this.world.centerY, 'Has perdido. Haz clic para jugar otra partida', { font: "30px Arial", fill: "#ffffff" });
+        this.input.onTap.addOnce(this.restartGame, this);
     };
     mainState.prototype.destruirLadrillo = function (pelota, ladrillo) {
         ladrillo.kill(); // Nos cargamos el sprite
-        this.pelota.body.velocity.x = this.pelota.body.velocity.x + 5;
-        this.pelota.body.velocity.y = this.pelota.body.velocity.y + 5;
+        //this.pelota.body.velocity.x = this.pelota.body.velocity.x * 1.2;
+        //this.pelota.body.velocity.y = this.pelota.body.velocity.y * 1.2;
         this.puntuacion = this.puntuacion + 1;
         // Imprimimos los textos
         this.scoreText.setText("Score: " + this.puntuacion);
+        this.calcularVelocidad();
+    };
+    mainState.prototype.calcularVelocidad = function () {
         // Sacamos el modulo de la velocidad y lo imprimimos por pantalla
         this.speedText.setText("Speed: " + Math.sqrt(Math.pow(this.pelota.body.velocity.x, 2) + Math.pow(this.pelota.body.velocity.y, 2)).toFixed(2));
+    };
+    mainState.prototype.restartGame = function () {
+        this.game.state.restart();
+        this.puntuacion = 0;
     };
     mainState.prototype.update = function () {
         _super.prototype.update.call(this);
         // Colisiones del jugador (barra) con las paredes
-        this.physics.arcade.collide(this.barra, this.pelota);
+        this.physics.arcade.collide(this.barra, this.pelota, this.calcularVelocidad, null, this);
         //this.physics.arcade.collide(this.pelota, this.grupoLadrillos);
         /* Overlap es similar a un trigger de colision. Es decir, gestiona las colisiones pero no de manera "física"
          de los objetos, al superponerse los objetos, ejcuta código*/
