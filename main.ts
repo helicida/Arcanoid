@@ -11,15 +11,19 @@ class mainState extends Phaser.State {
     // Variables
     private barra:Phaser.Sprite;
     private pelota:Phaser.Sprite;
-    private grupoLadrillos:Phaser.Group; // Ladrillos
+    private grupoLadrillos:Phaser.Group;
+    private proyectiles:Phaser.Group;
     private cursor:Phaser.CursorKeys;
     private puntuacion = 0;
+    private nextFire = 0;
+    private perdida = false;
 
     // Constantes
     private VELOCIDAD_MAXIMA = 450;  // pixels/second
     private FUERZA_ROZAMIENTO = 100; // Aceleración negativa
     private ACELERACION = 700;       // aceleración
     private MARGEN_TEXTO = 50;       // Margen de los textos
+    private CADENCIA_DISPARO = 200;
 
     preload():void {
         super.preload();
@@ -27,6 +31,7 @@ class mainState extends Phaser.State {
         // Importamos las imagenes
         this.load.image('barra', 'assets/png/paddleRed.png');
         this.load.image('pelota', 'assets/png/ballGrey.png');
+        this.load.image('proyectiles', 'assets/png/ballBlue.png');
         this.load.image('ladrilloVerde', 'assets/png/element_green_rectangle.png');
         this.load.image('ladrilloAzul', 'assets/png/element_blue_rectangle.png');
         this.load.image('ladrilloRojo', 'assets/png/element_red_rectangle.png');
@@ -46,6 +51,7 @@ class mainState extends Phaser.State {
 
         // Creamos los elementos
         this.createBarra();
+        this.createBullets();
         this.createPelota();
         this.crearLadrillos();
         this.createTexts();
@@ -149,7 +155,42 @@ class mainState extends Phaser.State {
         this.pelota.events.onOutOfBounds.add(this.destruirPelota, this);
     }
 
+    private createBullets() {
+        this.proyectiles = this.add.group();
+        this.proyectiles.enableBody = true;
+        this.proyectiles.physicsBodyType = Phaser.Physics.ARCADE;
+        this.proyectiles.createMultiple(20, 'proyectiles');
+
+        this.proyectiles.setAll('anchor.x', 0.5);
+        this.proyectiles.setAll('anchor.y', 0.5);
+        this.proyectiles.setAll('scale.x', 0.5);
+        this.proyectiles.setAll('scale.y', 0.5);
+        this.proyectiles.setAll('outOfBoundsKill', true);
+        this.proyectiles.setAll('checkWorldBounds', true);
+    };
+
+
+    fire():void {
+
+        if (this.time.now > this.nextFire) {
+
+            var bullet = this.proyectiles.getFirstDead();
+
+            if (bullet) {
+                var length = this.barra.width * 0.5 + 20;
+
+                bullet.reset(this.barra.x, this.barra.y - this.barra.height);
+
+                bullet.body.velocity.setTo(0, -500);
+
+                this.nextFire = this.time.now + this.CADENCIA_DISPARO;
+            }
+        }
+    }
+
     private destruirPelota(pelota:Phaser.Sprite){
+
+        this.perdida = true;
 
         pelota.kill();
 
@@ -160,15 +201,25 @@ class mainState extends Phaser.State {
     }
 
     private destruirLadrillo(pelota:Phaser.Sprite, ladrillo:Phaser.Sprite) {
+
         ladrillo.kill();    // Nos cargamos el sprite
-        //this.pelota.body.velocity.x = this.pelota.body.velocity.x * 1.2;
-        //this.pelota.body.velocity.y = this.pelota.body.velocity.y * 1.2;
         this.puntuacion = this.puntuacion + 1;
 
         // Imprimimos los textos
         this.scoreText.setText("Score: " + this.puntuacion);
 
         this.calcularVelocidad();
+    }
+
+    private ladrilloProyectil(proyectil:Phaser.Sprite, ladrillo:Phaser.Sprite){
+
+        ladrillo.kill();    // Nos cargamos el sprite
+        proyectil.kill();
+
+        this.puntuacion = this.puntuacion + 2;
+
+        // Imprimimos los textos
+        this.scoreText.setText("Score: " + this.puntuacion);
     }
 
     private calcularVelocidad(){
@@ -179,14 +230,19 @@ class mainState extends Phaser.State {
     private restartGame(){
         this.game.state.restart();
         this.puntuacion = 0;
+        this.perdida = false;
     }
 
     update():void {
         super.update();
 
-        // Colisiones del jugador (barra) con las paredes
+        if (this.input.activePointer.isDown && !this.perdida) {
+            this.fire();
+        }
+
+        // Colisiones
         this.physics.arcade.collide(this.barra, this.pelota, this.calcularVelocidad, null, this);
-        //this.physics.arcade.collide(this.pelota, this.grupoLadrillos);
+        this.physics.arcade.overlap(this.proyectiles, this.grupoLadrillos, this.ladrilloProyectil, null, this);
 
         /* Overlap es similar a un trigger de colision. Es decir, gestiona las colisiones pero no de manera "física"
          de los objetos, al superponerse los objetos, ejcuta código*/

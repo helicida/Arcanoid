@@ -10,17 +10,21 @@ var mainState = (function (_super) {
     function mainState() {
         _super.apply(this, arguments);
         this.puntuacion = 0;
+        this.nextFire = 0;
+        this.perdida = false;
         // Constantes
         this.VELOCIDAD_MAXIMA = 450; // pixels/second
         this.FUERZA_ROZAMIENTO = 100; // Aceleración negativa
         this.ACELERACION = 700; // aceleración
         this.MARGEN_TEXTO = 50; // Margen de los textos
+        this.CADENCIA_DISPARO = 200;
     }
     mainState.prototype.preload = function () {
         _super.prototype.preload.call(this);
         // Importamos las imagenes
         this.load.image('barra', 'assets/png/paddleRed.png');
         this.load.image('pelota', 'assets/png/ballGrey.png');
+        this.load.image('proyectiles', 'assets/png/ballBlue.png');
         this.load.image('ladrilloVerde', 'assets/png/element_green_rectangle.png');
         this.load.image('ladrilloAzul', 'assets/png/element_blue_rectangle.png');
         this.load.image('ladrilloRojo', 'assets/png/element_red_rectangle.png');
@@ -35,6 +39,7 @@ var mainState = (function (_super) {
         this.physics.arcade.checkCollision.down = false;
         // Creamos los elementos
         this.createBarra();
+        this.createBullets();
         this.createPelota();
         this.crearLadrillos();
         this.createTexts();
@@ -110,19 +115,49 @@ var mainState = (function (_super) {
         this.pelota.checkWorldBounds = true;
         this.pelota.events.onOutOfBounds.add(this.destruirPelota, this);
     };
+    mainState.prototype.createBullets = function () {
+        this.proyectiles = this.add.group();
+        this.proyectiles.enableBody = true;
+        this.proyectiles.physicsBodyType = Phaser.Physics.ARCADE;
+        this.proyectiles.createMultiple(20, 'proyectiles');
+        this.proyectiles.setAll('anchor.x', 0.5);
+        this.proyectiles.setAll('anchor.y', 0.5);
+        this.proyectiles.setAll('scale.x', 0.5);
+        this.proyectiles.setAll('scale.y', 0.5);
+        this.proyectiles.setAll('outOfBoundsKill', true);
+        this.proyectiles.setAll('checkWorldBounds', true);
+    };
+    ;
+    mainState.prototype.fire = function () {
+        if (this.time.now > this.nextFire) {
+            var bullet = this.proyectiles.getFirstDead();
+            if (bullet) {
+                var length = this.barra.width * 0.5 + 20;
+                bullet.reset(this.barra.x, this.barra.y - this.barra.height);
+                bullet.body.velocity.setTo(0, -500);
+                this.nextFire = this.time.now + this.CADENCIA_DISPARO;
+            }
+        }
+    };
     mainState.prototype.destruirPelota = function (pelota) {
+        this.perdida = true;
         pelota.kill();
         this.endGameText = this.add.text(this.world.centerX - 300, this.world.centerY, 'Has perdido. Haz clic para jugar otra partida', { font: "30px Arial", fill: "#ffffff" });
         this.input.onTap.addOnce(this.restartGame, this);
     };
     mainState.prototype.destruirLadrillo = function (pelota, ladrillo) {
         ladrillo.kill(); // Nos cargamos el sprite
-        //this.pelota.body.velocity.x = this.pelota.body.velocity.x * 1.2;
-        //this.pelota.body.velocity.y = this.pelota.body.velocity.y * 1.2;
         this.puntuacion = this.puntuacion + 1;
         // Imprimimos los textos
         this.scoreText.setText("Score: " + this.puntuacion);
         this.calcularVelocidad();
+    };
+    mainState.prototype.ladrilloProyectil = function (proyectil, ladrillo) {
+        ladrillo.kill(); // Nos cargamos el sprite
+        proyectil.kill();
+        this.puntuacion = this.puntuacion + 2;
+        // Imprimimos los textos
+        this.scoreText.setText("Score: " + this.puntuacion);
     };
     mainState.prototype.calcularVelocidad = function () {
         // Sacamos el modulo de la velocidad y lo imprimimos por pantalla
@@ -131,12 +166,16 @@ var mainState = (function (_super) {
     mainState.prototype.restartGame = function () {
         this.game.state.restart();
         this.puntuacion = 0;
+        this.perdida = false;
     };
     mainState.prototype.update = function () {
         _super.prototype.update.call(this);
-        // Colisiones del jugador (barra) con las paredes
+        if (this.input.activePointer.isDown && !this.perdida) {
+            this.fire();
+        }
+        // Colisiones
         this.physics.arcade.collide(this.barra, this.pelota, this.calcularVelocidad, null, this);
-        //this.physics.arcade.collide(this.pelota, this.grupoLadrillos);
+        this.physics.arcade.overlap(this.proyectiles, this.grupoLadrillos, this.ladrilloProyectil, null, this);
         /* Overlap es similar a un trigger de colision. Es decir, gestiona las colisiones pero no de manera "física"
          de los objetos, al superponerse los objetos, ejcuta código*/
         this.physics.arcade.collide(this.pelota, this.grupoLadrillos, this.destruirLadrillo, null, this);
