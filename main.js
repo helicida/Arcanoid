@@ -12,6 +12,7 @@ var mainState = (function (_super) {
         this.puntuacion = 0;
         this.nextFire = 0;
         this.perdida = false;
+        this.ganada = false;
         // Constantes
         this.VELOCIDAD_MAXIMA = 450; // pixels/second
         this.FUERZA_ROZAMIENTO = 100; // Aceleración negativa
@@ -142,8 +143,10 @@ var mainState = (function (_super) {
     mainState.prototype.destruirPelota = function (pelota) {
         this.perdida = true;
         pelota.kill();
-        this.endGameText = this.add.text(this.world.centerX - 300, this.world.centerY, 'Has perdido. Haz clic para jugar otra partida', { font: "30px Arial", fill: "#ffffff" });
-        this.input.onTap.addOnce(this.restartGame, this);
+        if (!this.ganada) {
+            this.endGameText = this.add.text(this.world.centerX - 300, this.world.centerY, 'Has perdido. Haz clic para jugar otra partida', { font: "30px Arial", fill: "#ffffff" });
+            this.input.onTap.addOnce(this.restartGame, this);
+        }
     };
     mainState.prototype.destruirLadrillo = function (pelota, ladrillo) {
         ladrillo.kill(); // Nos cargamos el sprite
@@ -168,10 +171,18 @@ var mainState = (function (_super) {
         this.puntuacion = 0;
         this.perdida = false;
     };
+    mainState.prototype.ganarPartida = function () {
+        this.ganada = true;
+        this.endGameText = this.add.text(this.world.centerX - 300, this.world.centerY, '¡Has ganado! Haz clic para jugar otra partida', { font: "30px Arial", fill: "#ffffff" });
+        this.input.onTap.addOnce(this.restartGame, this);
+    };
     mainState.prototype.update = function () {
         _super.prototype.update.call(this);
         if (this.input.activePointer.isDown && !this.perdida) {
             this.fire();
+        }
+        if (this.puntuacion > 1 && this.grupoLadrillos.countDead() == this.grupoLadrillos.length) {
+            this.ganarPartida();
         }
         // Colisiones
         this.physics.arcade.collide(this.barra, this.pelota, this.calcularVelocidad, null, this);

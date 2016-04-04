@@ -17,6 +17,7 @@ class mainState extends Phaser.State {
     private puntuacion = 0;
     private nextFire = 0;
     private perdida = false;
+    private ganada = false;
 
     // Constantes
     private VELOCIDAD_MAXIMA = 450;  // pixels/second
@@ -194,10 +195,12 @@ class mainState extends Phaser.State {
 
         pelota.kill();
 
-        this.endGameText = this.add.text(this.world.centerX - 300, this.world.centerY,  'Has perdido. Haz clic para jugar otra partida',
-            {font: "30px Arial", fill: "#ffffff"});
+        if(!this.ganada){
+            this.endGameText = this.add.text(this.world.centerX - 300, this.world.centerY,  'Has perdido. Haz clic para jugar otra partida',
+                {font: "30px Arial", fill: "#ffffff"});
 
-        this.input.onTap.addOnce(this.restartGame, this);
+            this.input.onTap.addOnce(this.restartGame, this);
+        }
     }
 
     private destruirLadrillo(pelota:Phaser.Sprite, ladrillo:Phaser.Sprite) {
@@ -233,11 +236,25 @@ class mainState extends Phaser.State {
         this.perdida = false;
     }
 
+    private ganarPartida(){
+
+        this.ganada = true;
+
+        this.endGameText = this.add.text(this.world.centerX - 300, this.world.centerY,  '¡Has ganado! Haz clic para jugar otra partida',
+            {font: "30px Arial", fill: "#ffffff"});
+
+        this.input.onTap.addOnce(this.restartGame, this);
+    }
+
     update():void {
         super.update();
 
         if (this.input.activePointer.isDown && !this.perdida) {
             this.fire();
+        }
+
+        if (this.puntuacion > 1 && this.grupoLadrillos.countDead() == this.grupoLadrillos.length){
+            this.ganarPartida();
         }
 
         // Colisiones
